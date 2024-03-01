@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Title>The Isle Evrima RCON Client</Title>
+    <Authors>aerond</Authors>
+    <PackageProjectUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</PackageProjectUrl>
+    <Description>C# .NET Standard RCON client library for The Isle Evrima.</Description>
+    <RepositoryUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</RepositoryUrl>
   </PropertyGroup>
 
 </Project>

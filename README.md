@@ -1,6 +1,9 @@
 # TheIsleEvrimaRconClient
 RCON client for The Isle Evrima.
 
+# NuGet
+https://www.nuget.org/packages/TheIsleEvrimaRconClient
+
 # Example usage
 ```csharp
 using TheIsleEvrimaRconClient;

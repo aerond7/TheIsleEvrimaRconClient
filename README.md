@@ -4,6 +4,8 @@ RCON client for The Isle Evrima.
 # NuGet
 https://www.nuget.org/packages/TheIsleEvrimaRconClient
 
+https://www.nuget.org/packages/TheIsleEvrimaRconClient.Extensions
+
 # Example usage
 ```csharp
 using TheIsleEvrimaRconClient;
@@ -17,3 +19,29 @@ if (connected)
      var response = await rcon.SendCommandAsync(EvrimaRconCommand.PlayerList);
 }
 ```
+
+# TheIsleEvrimaRconClient.Extensions
+This library is a simple extensions wrapper over the `EvrimaRconClient` which creates an easy to use interface to execute commands via the RCON.
+
+**All methods are asynchronous and return Task.**
+
+Currently implemented extension methods:
+| Method | Returns | Description |
+| --- | --- | --- |
+| Announce | void | Sends the "announce" command to the server with a message that is displayed to all players. |
+| UpdatePlayables | string | Sends the "updateplayables" command to the server. Returns the response from the server. |
+| Ban | void | Sends the "ban" command to the server along with an EOS ID of a player that gets banned. |
+| Kick | void | Sends the "kick" command to the server along with an EOS ID of a player that gets kicked. |
+| GetPlayerList | List of [ServerPlayer](#serverplayer) | Sends the "playerlist" command to the server and automatically parses the response into a list of [ServerPlayer](#serverplayer) objects. |
+| Save | void | Sends the "save" command to the server. |
+
+# TheIsleEvrimaRconClient.Extensions.Models
+
+## ServerPlayer
+Object that represents a player on a server.
+
+Properties:
+| Name | Data type | Description |
+| --- | --- | --- |
+| EosId | string | The EOS ID of the player. |
+| PlayerName | string | The username of the player. |

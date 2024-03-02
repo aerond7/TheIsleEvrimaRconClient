@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<Title>The Isle Evrima RCON Client Extensions</Title>
+	<Authors>aerond</Authors>
+	<PackageProjectUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</PackageProjectUrl>
+	<Description>Extensions for TheIsleEvrimaRconClient library, contains extensions that wrap over the EvrimaRconClient, making it a simple interface to call RCON commands.</Description>
+	<RepositoryUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</RepositoryUrl>
+	<PackageTags>the isle;rcon;client</PackageTags>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TheIsleEvrimaRconClient" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>

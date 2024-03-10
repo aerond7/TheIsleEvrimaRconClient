@@ -9,10 +9,11 @@
 	<RepositoryUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</RepositoryUrl>
 	<PackageTags>the isle;rcon;client</PackageTags>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	<Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TheIsleEvrimaRconClient" Version="1.0.0" />
+    <PackageReference Include="TheIsleEvrimaRconClient" Version="1.0.1" />
   </ItemGroup>
 
 </Project>

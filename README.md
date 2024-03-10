@@ -10,7 +10,21 @@ https://www.nuget.org/packages/TheIsleEvrimaRconClient.Extensions
 ```csharp
 using TheIsleEvrimaRconClient;
 
-var rcon = new EvrimaRconClient("127.0.0.1", 8888, "rcon_password", 5000);
+// Option 1
+var rcon = new EvrimaRconClient(new EvrimaRconClientConfiguration(IPAddress.Parse("127.0.0.1"), 8888, "rcon_password"));
+// or
+var rcon = new EvrimaRconClient(new EvrimaRconClientConfiguration
+{
+    Host = IPAddress.Parse("127.0.0.1"),
+    Port = 8888,
+    Password = "rcon_password"
+});
+// you may also pass a string as the host in the 1st option, but do note that behind the scenes it still parses the string into an instace of IPAddress, so any invalid IP will throw an invalid argument exception
+
+// Option 2 (may become obsolete in the future)
+var rcon = new EvrimaRconClient("127.0.0.1", 8888, "rcon_password");
+
+// Connecting and executing commands
 var connected = await rcon.ConnectAsync();
 if (connected)
 {

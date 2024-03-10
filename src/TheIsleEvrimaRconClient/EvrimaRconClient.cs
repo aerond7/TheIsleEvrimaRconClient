@@ -3,41 +3,103 @@ using System.Text;
 using System.Threading.Tasks;
 using System;
 using TheIsleEvrimaRconClient.Internal;
+using System.Net;
 
 namespace TheIsleEvrimaRconClient
 {
+    /// <summary>
+    /// RCON client for The Isle Evrima.
+    /// </summary>
     public class EvrimaRconClient : IDisposable
     {
-        private bool IsConnected => _client != null && _stream != null && _client.Connected;
+        /// <summary>
+        /// Indicates whether the client is connected or not.
+        /// </summary>
+        public bool IsConnected => _client != null && _stream != null && _client.Connected;
+
+        private readonly EvrimaRconClientConfiguration config;
 
         private TcpClient _client;
         private NetworkStream _stream;
         private bool _isAuthorized = false;
 
-        private readonly string host;
-        private readonly int port;
-        private readonly string password;
-        private readonly int timeout;
+        /// <summary>
+        /// Initialize the client using a configuration object. This is the recommended way.
+        /// </summary>
+        /// <param name="configuration">RCON connection configuration</param>
+        public EvrimaRconClient(EvrimaRconClientConfiguration configuration)
+        {
+            this.config = configuration;
+        }
 
+        /// <summary>
+        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
+        /// </summary>
+        /// <param name="host">IP address of the RCON server</param>
+        /// <param name="port">Port of the RCON server</param>
+        /// <param name="password">Password to the RCON server</param>
+        public EvrimaRconClient(IPAddress host,
+            int port,
+            string password)
+        {
+            this.config = new EvrimaRconClientConfiguration(host, port, password);
+        }
+
+        /// <summary>
+        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
+        /// </summary>
+        /// <param name="host">IP address of the RCON server</param>
+        /// <param name="port">Port of the RCON server</param>
+        /// <param name="password">Password to the RCON server</param>
+        /// <param name="timeout">Connection timeout in milliseconds</param>
+        public EvrimaRconClient(IPAddress host,
+            int port,
+            string password,
+            int timeout)
+        {
+            this.config = new EvrimaRconClientConfiguration(host, port, password, timeout);
+        }
+
+        /// <summary>
+        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
+        /// </summary>
+        /// <param name="host">IP address of the RCON server</param>
+        /// <param name="port">Port of the RCON server</param>
+        /// <param name="password">Password to the RCON server</param>
+        public EvrimaRconClient(string host,
+            int port,
+            string password)
+        {
+            this.config = new EvrimaRconClientConfiguration(host, port, password);
+        }
+
+        /// <summary>
+        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
+        /// </summary>
+        /// <param name="host">IP address of the RCON server</param>
+        /// <param name="port">Port of the RCON server</param>
+        /// <param name="password">Password to the RCON server</param>
+        /// <param name="timeout">Connection timeout in milliseconds</param>
         public EvrimaRconClient(string host,
             int port,
             string password,
-            int timeout = 5000)
+            int timeout)
         {
-            this.host = host;
-            this.port = port;
-            this.password = password;
-            this.timeout = timeout;
+            this.config = new EvrimaRconClientConfiguration(host, port, password, timeout);
         }
 
+        /// <summary>
+        /// Connects the client to the RCON server, must be called before executing any commands.
+        /// </summary>
+        /// <returns>True if connection succeeded, False if connection failed</returns>
         public async Task<bool> ConnectAsync()
         {
             try
             {
                 _client = new TcpClient();
-                await _client.ConnectAsync(host, port);
+                await _client.ConnectAsync(config.Host, config.Port);
                 _stream = _client.GetStream();
-                _stream.ReadTimeout = timeout;
+                _stream.ReadTimeout = config.Timeout;
                 return await AuthorizeAsync();
             }
             catch
@@ -50,7 +112,7 @@ namespace TheIsleEvrimaRconClient
         {
             if (!_isAuthorized)
             {
-                await SendPacketAsync($"\x01{password}\x00");
+                await SendPacketAsync($"\x01{config.Password}\x00");
                 var response = await ReadPacketAsync();
                 if (!response.Contains("Password Accepted"))
                 {
@@ -79,7 +141,7 @@ namespace TheIsleEvrimaRconClient
         {
             if (_stream == null)
             {
-                throw new InvalidOperationException("Network stream is null");
+                throw new InvalidOperationException("Network stream is null, the client may have disconnected");
             }
 
             byte[] buffer = Encoding.ASCII.GetBytes(data);
@@ -90,7 +152,7 @@ namespace TheIsleEvrimaRconClient
         {
             if (_stream == null)
             {
-                throw new InvalidOperationException("Network stream is null");
+                throw new InvalidOperationException("Network stream is null, the client may have disconnected");
             }
 
             byte[] buffer = new byte[4096];
@@ -98,6 +160,13 @@ namespace TheIsleEvrimaRconClient
             return Encoding.ASCII.GetString(buffer, 0, bytesRead);
         }
 
+        /// <summary>
+        /// Sends a command to the RCON server with the specified argument.
+        /// </summary>
+        /// <param name="commandName">The command name</param>
+        /// <param name="commandArgument">The command argument</param>
+        /// <returns>Response from the server</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
         public async Task<string> SendCommandAsync(string commandName, string commandArgument = "")
         {
             if (!IsConnected)
@@ -119,9 +188,33 @@ namespace TheIsleEvrimaRconClient
             return GetFriendlyCommandResponse(formattedCommand, response, commandArgument);
         }
 
+        /// <summary>
+        /// Sends a pre-defined command to the RCON server with the specified argument.
+        /// </summary>
+        /// <param name="command">Command to send</param>
+        /// <param name="commandArgument">Command argument</param>
+        /// <returns>Response from the server</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
         public Task<string> SendCommandAsync(EvrimaRconCommand command, string commandArgument = "")
         {
             return SendCommandAsync(command.ToString(), commandArgument);
+        }
+
+        /// <summary>
+        /// Sends a command to the RCON server.
+        /// </summary>
+        /// <param name="command">The full command to send</param>
+        /// <returns>Response from the server</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
+        public Task<string> SendCommandAsync(string command)
+        {
+            var split = command.Split(' ');
+            if (split.Length <= 0)
+            {
+                return Task.FromResult("Invalid command format");
+            }
+
+            return SendCommandAsync(split[0], split.Length > 1 ? split[1] : "");
         }
 
         private string GetFriendlyCommandResponse(string commandName, string response, string input)
@@ -147,6 +240,9 @@ namespace TheIsleEvrimaRconClient
             }
         }
 
+        /// <summary>
+        /// Disconnects and disposes the client
+        /// </summary>
         public void Dispose()
         {
             Disconnect();

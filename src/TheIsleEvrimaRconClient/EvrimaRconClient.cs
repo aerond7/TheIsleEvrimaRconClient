@@ -3,7 +3,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System;
 using TheIsleEvrimaRconClient.Internal;
-using System.Net;
 
 namespace TheIsleEvrimaRconClient
 {
@@ -17,76 +16,21 @@ namespace TheIsleEvrimaRconClient
         /// </summary>
         public bool IsConnected => _client != null && _stream != null && _client.Connected;
 
-        private readonly EvrimaRconClientConfiguration config;
+        private readonly EvrimaRconClientConfiguration _config;
 
         private TcpClient _client;
         private NetworkStream _stream;
-        private bool _isAuthorized = false;
+        private bool _isAuthorized;
 
         /// <summary>
-        /// Initialize the client using a configuration object. This is the recommended way.
+        /// Initialize the client using a configuration object.
         /// </summary>
         /// <param name="configuration">RCON connection configuration</param>
         public EvrimaRconClient(EvrimaRconClientConfiguration configuration)
         {
-            this.config = configuration;
+            _config = configuration;
         }
 
-        /// <summary>
-        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
-        /// </summary>
-        /// <param name="host">IP address of the RCON server</param>
-        /// <param name="port">Port of the RCON server</param>
-        /// <param name="password">Password to the RCON server</param>
-        public EvrimaRconClient(IPAddress host,
-            int port,
-            string password)
-        {
-            this.config = new EvrimaRconClientConfiguration(host, port, password);
-        }
-
-        /// <summary>
-        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
-        /// </summary>
-        /// <param name="host">IP address of the RCON server</param>
-        /// <param name="port">Port of the RCON server</param>
-        /// <param name="password">Password to the RCON server</param>
-        /// <param name="timeout">Connection timeout in milliseconds</param>
-        public EvrimaRconClient(IPAddress host,
-            int port,
-            string password,
-            int timeout)
-        {
-            this.config = new EvrimaRconClientConfiguration(host, port, password, timeout);
-        }
-
-        /// <summary>
-        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
-        /// </summary>
-        /// <param name="host">IP address of the RCON server</param>
-        /// <param name="port">Port of the RCON server</param>
-        /// <param name="password">Password to the RCON server</param>
-        public EvrimaRconClient(string host,
-            int port,
-            string password)
-        {
-            this.config = new EvrimaRconClientConfiguration(host, port, password);
-        }
-
-        /// <summary>
-        /// Initialize the client. This method is not yet obsolete, but it may be deprecated in the future.
-        /// </summary>
-        /// <param name="host">IP address of the RCON server</param>
-        /// <param name="port">Port of the RCON server</param>
-        /// <param name="password">Password to the RCON server</param>
-        /// <param name="timeout">Connection timeout in milliseconds</param>
-        public EvrimaRconClient(string host,
-            int port,
-            string password,
-            int timeout)
-        {
-            this.config = new EvrimaRconClientConfiguration(host, port, password, timeout);
-        }
 
         /// <summary>
         /// Connects the client to the RCON server, must be called before executing any commands.
@@ -97,9 +41,9 @@ namespace TheIsleEvrimaRconClient
             try
             {
                 _client = new TcpClient();
-                await _client.ConnectAsync(config.Host, config.Port);
+                await _client.ConnectAsync(_config.Host, _config.Port);
                 _stream = _client.GetStream();
-                _stream.ReadTimeout = config.Timeout;
+                _stream.ReadTimeout = _config.Timeout;
                 return await AuthorizeAsync();
             }
             catch
@@ -112,14 +56,13 @@ namespace TheIsleEvrimaRconClient
         {
             if (!_isAuthorized)
             {
-                await SendPacketAsync($"\x01{config.Password}\x00");
+                await SendPacketAsync($"\x01{_config.Password}\x00");
                 var response = await ReadPacketAsync();
                 if (!response.Contains("Password Accepted"))
                 {
                     return false;
                 }
                 _isAuthorized = true;
-                await ReconnectAsync();
                 return true;
             }
             return false;
@@ -131,11 +74,6 @@ namespace TheIsleEvrimaRconClient
             _client?.Close();
         }
 
-        private async Task ReconnectAsync()
-        {
-            Disconnect();
-            await ConnectAsync();
-        }
 
         private async Task SendPacketAsync(string data)
         {
@@ -167,7 +105,7 @@ namespace TheIsleEvrimaRconClient
         /// <param name="commandArgument">The command argument</param>
         /// <returns>Response from the server</returns>
         /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
-        public async Task<string> SendCommandAsync(string commandName, string commandArgument = "")
+        public async Task<string> SendCommandAsync(string commandName, string commandArgument)
         {
             if (!IsConnected)
             {
@@ -189,13 +127,24 @@ namespace TheIsleEvrimaRconClient
         }
 
         /// <summary>
+        /// Sends a pre-defined command to the RCON server.
+        /// </summary>
+        /// <param name="command">Command to send</param>
+        /// <returns>Response from the server</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
+        public Task<string> SendCommandAsync(EvrimaRconCommand command)
+        {
+            return SendCommandAsync(command.ToString(), "");
+        }
+
+        /// <summary>
         /// Sends a pre-defined command to the RCON server with the specified argument.
         /// </summary>
         /// <param name="command">Command to send</param>
         /// <param name="commandArgument">Command argument</param>
         /// <returns>Response from the server</returns>
         /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
-        public Task<string> SendCommandAsync(EvrimaRconCommand command, string commandArgument = "")
+        public Task<string> SendCommandAsync(EvrimaRconCommand command, string commandArgument)
         {
             return SendCommandAsync(command.ToString(), commandArgument);
         }
@@ -208,13 +157,20 @@ namespace TheIsleEvrimaRconClient
         /// <exception cref="InvalidOperationException">Thrown if the client is not connected</exception>
         public Task<string> SendCommandAsync(string command)
         {
-            var split = command.Split(' ');
-            if (split.Length <= 0)
+            if (string.IsNullOrWhiteSpace(command))
             {
                 return Task.FromResult("Invalid command format");
             }
 
-            return SendCommandAsync(split[0], split.Length > 1 ? split[1] : "");
+            var spaceIndex = command.IndexOf(' ');
+            if (spaceIndex < 0)
+            {
+                return SendCommandAsync(command, "");
+            }
+
+            var commandName = command.Substring(0, spaceIndex);
+            var commandArgument = command.Substring(spaceIndex + 1);
+            return SendCommandAsync(commandName, commandArgument);
         }
 
         private string GetFriendlyCommandResponse(string commandName, string response, string input)
@@ -223,6 +179,12 @@ namespace TheIsleEvrimaRconClient
             {
                 case "announce":
                     return $"Announced: {input}";
+                case "directmessage":
+                    return $"Direct message sent: {input}";
+                case "serverdetails":
+                    return response;
+                case "wipecorpses":
+                    return "Corpses wiped";
                 case "updateplayables":
                     return response;
                 case "ban":
@@ -233,10 +195,26 @@ namespace TheIsleEvrimaRconClient
                     return response;
                 case "save":
                     return "Server saved";
-                case "custom":
-                    return "Command executed";
+                case "getplayerdata":
+                    return response;
+                case "togglewhitelist":
+                    return "Whitelist toggled";
+                case "addwhitelistid":
+                    return $"Added to whitelist: {input}";
+                case "removewhitelistid":
+                    return $"Removed from whitelist: {input}";
+                case "toggleglobalchat":
+                    return "Global chat toggled";
+                case "togglehumans":
+                    return "Humans toggled";
+                case "toggleai":
+                    return "AI toggled";
+                case "disableaiclasses":
+                    return $"AI classes updated: {input}";
+                case "aidensity":
+                    return $"AI density set to: {input}";
                 default:
-                    return "Unknown command";
+                    return response;
             }
         }
 

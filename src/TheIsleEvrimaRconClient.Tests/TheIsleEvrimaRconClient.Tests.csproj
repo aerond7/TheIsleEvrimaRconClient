@@ -21,11 +21,5 @@
     <ProjectReference Include="..\TheIsleEvrimaRconClient\TheIsleEvrimaRconClient.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="testconfig.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>
 

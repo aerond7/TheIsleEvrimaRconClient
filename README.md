@@ -1,6 +1,6 @@
 ﻿# TheIsleEvrimaRconClient
 
-RCON client for The Isle Evrima, aligned with [RCON spec v0.17.54](https://github.com/aerond7/TheIsleEvrimaRconClient).
+RCON client for The Isle Evrima.
 
 Use `EvrimaRconClientConfiguration` to configure host, port, password, and timeout.
 The client is constructed from that configuration object.
@@ -36,7 +36,7 @@ if (connected)
 {
     // Raw command via enum
     await rcon.SendCommandAsync(EvrimaRconCommand.Announce, "Hello World");
-    // Raw command via string
+    // Raw command via string name + argument
     await rcon.SendCommandAsync("announce", "Hello World");
     // Raw command via combined string
     await rcon.SendCommandAsync("announce Hello World");
@@ -47,28 +47,28 @@ if (connected)
 
 ## Available commands (`EvrimaRconCommand`)
 
-All commands are defined in the `EvrimaRconCommand` enum and map directly to RCON spec v0.17.54.
+All commands are defined in the `EvrimaRconCommand` enum.
 
-| Command | Description |
-| --- | --- |
-| `Announce` | Announces a message displayed to all players. |
-| `DirectMessage` | Sends a direct message to a specific player. |
-| `ServerDetails` | Retrieves all current server settings. |
-| `WipeCorpses` | Wipes all corpses on the server. |
-| `UpdatePlayables` | Modifies the playable classes. |
-| `Ban` | Bans a player by player id (EOS or Steam). |
-| `Kick` | Kicks a player by player id (EOS or Steam). |
-| `PlayerList` | Returns a list of all online players. |
-| `Save` | Saves all game data. |
-| `GetPlayerData` | Retrieves info about each player (location, character stats, etc.). |
-| `ToggleWhitelist` | Turns the server whitelist on/off. |
-| `AddWhitelistId` | Adds player id(s) to the server whitelist. |
-| `RemoveWhitelistId` | Removes player id(s) from the server whitelist. |
-| `ToggleGlobalChat` | Turns global chat on/off. |
-| `ToggleHumans` | Turns humans on/off. |
-| `ToggleAI` | Turns AI spawns on/off. |
-| `DisableAIClasses` | Updates the allowable AI spawn list. |
-| `AIDensity` | Adjusts the AI spawn density. |
+| Command | Argument format | Description |
+| --- | --- | --- |
+| `Announce` | `message` | Announces a message displayed to all players. |
+| `DirectMessage` | `player,message` | Sends a direct message to a player (EOS ID, Steam ID, or name). |
+| `ServerDetails` | *(none)* | Retrieves all current server settings. |
+| `WipeCorpses` | *(none)* | Wipes all corpses on the server. |
+| `UpdatePlayables` | `class:enabled` or `class:disabled` | Sets a playable class to enabled or disabled. |
+| `Ban` | `player,reason` | Bans a player (EOS ID, Steam ID, or name). |
+| `Kick` | `player,reason` | Kicks a player (EOS ID, Steam ID, or name). |
+| `PlayerList` | *(none)* | Returns a list of all online players. |
+| `Save` | `backupName` *(optional)* | Saves all game data, with an optional backup name. |
+| `GetPlayerData` | *(none)* | Retrieves detailed stats per player. |
+| `ToggleWhitelist` | `0` or `1` | Disables or enables the server whitelist. |
+| `AddWhitelistId` | `playerId` | Adds a player ID to the server whitelist. |
+| `RemoveWhitelistId` | `playerId` | Removes a player ID from the server whitelist. |
+| `ToggleGlobalChat` | `0` or `1` | Disables or enables global chat. |
+| `ToggleHumans` | `0` or `1` | Disables or enables humans. |
+| `ToggleAI` | `0` or `1` | Disables or enables AI spawns. |
+| `DisableAIClasses` | `class[,class,...]` | Updates the AI spawn list. |
+| `AIDensity` | `0.0`–`1.0` | Sets the AI spawn density. |
 
 ---
 
@@ -91,20 +91,42 @@ await rcon.ConnectAsync();
 
 // ── Fire-and-forget ──────────────────────────────────────────────────────────
 await rcon.Announce("Hello World!");
-await rcon.DirectMessage("eos_player_id", "Hello!");
-await rcon.Ban("eos_player_id");
-await rcon.Kick("eos_player_id");
+
+// player argument accepts EOS ID, Steam ID, or player name
+await rcon.DirectMessage("PlayerName", "Hello!");
+await rcon.Ban("PlayerName", "Cheating");
+await rcon.Kick("eos_player_id", "AFK");
+
+// Optional backup name
 await rcon.Save();
+await rcon.Save("backup_01");
+
 await rcon.WipeCorpses();
-await rcon.ToggleWhitelist();
+
+// Toggle methods now require an explicit enabled/disabled state
+await rcon.ToggleWhitelist(true);   // enable
+await rcon.ToggleWhitelist(false);  // disable
 await rcon.AddWhitelistIds("id1,id2");
 await rcon.RemoveWhitelistIds("id1");
-await rcon.ToggleGlobalChat();
-await rcon.ToggleHumans();
-await rcon.ToggleAI();
-await rcon.DisableAIClasses("Troodon,Herrerasaurus");
+await rcon.ToggleGlobalChat(true);
+await rcon.ToggleHumans(false);
+await rcon.ToggleAI(true);
+
+await rcon.DisableAIClasses("raptor,stego");
+
+// AIDensity accepts float or string
+await rcon.SetAIDensity(0.5f);
 await rcon.SetAIDensity("0.5");
-await rcon.UpdatePlayables("Deinonychus,Herrerasaurus");
+
+// UpdatePlayables: single class, multiple classes via dictionary, or raw string
+await rcon.UpdatePlayables("raptor", true);           // raptor:enabled
+await rcon.UpdatePlayables("raptor", false);        // raptor:disabled
+await rcon.UpdatePlayables(new Dictionary<string, bool>    // raptor:enabled,stego:disabled,...
+{
+    { "raptor", true },
+    { "stego", false },
+});
+await rcon.UpdatePlayables("raptor:enabled,stego:disabled"); // raw string
 
 // ── Typed responses ──────────────────────────────────────────────────────────
 List<ServerPlayer> players = await rcon.GetPlayerList();
@@ -124,21 +146,23 @@ Console.WriteLine($"{details.Name} on {details.Map} — {details.CurrentPlayers}
 | Method | Returns | Description |
 | --- | --- | --- |
 | `Announce(message)` | `void` | Announces a message to all players. |
-| `DirectMessage(playerId, message)` | `void` | Sends a direct message to a specific player. |
-| `Ban(playerId)` | `void` | Bans a player by player id (EOS or Steam). |
-| `Kick(playerId)` | `void` | Kicks a player by player id (EOS or Steam). |
+| `DirectMessage(player, message)` | `void` | Sends a direct message. `player` can be an EOS ID, Steam ID, or name. |
+| `Ban(player, reason)` | `void` | Bans a player. `player` can be an EOS ID, Steam ID, or name. |
+| `Kick(player, reason)` | `void` | Kicks a player. `player` can be an EOS ID, Steam ID, or name. |
 | `Save()` | `void` | Saves all game data. |
+| `Save(backupName)` | `void` | Saves all game data with the specified backup name. |
 | `WipeCorpses()` | `void` | Wipes all corpses on the server. |
-| `ToggleWhitelist()` | `void` | Toggles the server whitelist on/off. |
-| `AddWhitelistIds(playerIds)` | `void` | Adds player id(s) to the whitelist (comma-delimited). |
-| `RemoveWhitelistIds(playerIds)` | `void` | Removes player id(s) from the whitelist (comma-delimited). |
-| `ToggleGlobalChat()` | `void` | Toggles global chat on/off. |
-| `ToggleHumans()` | `void` | Toggles humans on/off. |
-| `ToggleAI()` | `void` | Toggles AI spawns on/off. |
-| `DisableAIClasses(aiClasses)` | `void` | Updates the allowable AI spawn list (comma-delimited). |
-| `SetAIDensity(density)` | `void` | Adjusts the AI spawn density. |
-| `UpdatePlayables()` | `string` | Sends the UpdatePlayables command; returns the server response. |
-| `UpdatePlayables(playables)` | `string` | Sets playable classes from a comma-delimited string; returns the server response. |
+| `ToggleWhitelist(enabled)` | `void` | Enables (`true`) or disables (`false`) the server whitelist. |
+| `AddWhitelistIds(playerIds)` | `void` | Adds player ID(s) to the whitelist (comma-delimited). |
+| `RemoveWhitelistIds(playerIds)` | `void` | Removes player ID(s) from the whitelist (comma-delimited). |
+| `ToggleGlobalChat(enabled)` | `void` | Enables (`true`) or disables (`false`) global chat. |
+| `ToggleHumans(enabled)` | `void` | Enables (`true`) or disables (`false`) humans. |
+| `ToggleAI(enabled)` | `void` | Enables (`true`) or disables (`false`) AI spawns. |
+| `DisableAIClasses(aiClasses)` | `void` | Updates the AI spawn list (comma-delimited class names). |
+| `SetAIDensity(density)` | `void` | Sets the AI spawn density. Accepts `float` (0.0–1.0) or `string`. |
+| `UpdatePlayables(className, enabled)` | `string` | Sets a single playable class to enabled or disabled. |
+| `UpdatePlayables(playables)` | `string` | Sets multiple playable classes at once via a `Dictionary<string, bool>`. |
+| `UpdatePlayables(argument)` | `string` | Sends a raw `updateplayables` argument, e.g. `"Deinonychus:enabled,Rex:disabled"`. |
 | `GetPlayerList()` | `List<ServerPlayer>` | Returns a parsed list of online players. |
 | `GetPlayerData()` | `List<PlayerData>` | Returns player stats parsed into a typed list, one entry per online player. |
 | `GetServerDetails()` | `ServerDetails` | Returns server configuration parsed into a typed object. |
@@ -153,7 +177,7 @@ Represents an online player as returned by `GetPlayerList()`.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `PlayerId` | `string` | The player's id (EOS or Steam). |
+| `PlayerId` | `string` | The player's ID (EOS or Steam). |
 | `PlayerName` | `string` | The player's username. |
 
 ---
@@ -165,7 +189,7 @@ Represents the full stats for a single online player as returned by `GetPlayerDa
 | Property | Type | Description |
 | --- | --- | --- |
 | `Name` | `string` | The player's in-game name. |
-| `PlayerId` | `string` | The player's platform id (EOS or Steam). |
+| `PlayerId` | `string` | The player's platform ID (EOS or Steam). |
 | `Gender` | `string` | The player's gender (e.g. `Male`, `Female`). |
 | `Location` | `PlayerLocation` | Current world-space coordinates. |
 | `Class` | `string` | The player's current dinosaur class (e.g. `Tyrannosaurus`). |

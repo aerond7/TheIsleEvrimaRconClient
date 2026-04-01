@@ -9,7 +9,7 @@
     <RepositoryUrl>https://github.com/aerond7/TheIsleEvrimaRconClient</RepositoryUrl>
     <PackageTags>the isle;rcon;client</PackageTags>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
-	<Version>2.0.0</Version>
+	<Version>2.1.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

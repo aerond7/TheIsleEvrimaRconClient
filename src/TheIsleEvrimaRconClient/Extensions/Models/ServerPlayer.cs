@@ -1,5 +1,8 @@
 ﻿namespace TheIsleEvrimaRconClient.Extensions.Models
 {
+    /// <summary>
+    /// Represents a player on the server, as returned by the PlayerList command.
+    /// </summary>
     public class ServerPlayer
     {
         /// <summary>
@@ -13,3 +16,4 @@
         public string PlayerName { get; set; }
     }
 }
+

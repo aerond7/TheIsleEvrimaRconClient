@@ -17,83 +17,133 @@ namespace TheIsleEvrimaRconClient.Extensions
         // ── Simple fire-and-forget / raw-string commands ─────────────────────────
 
         /// <summary>Announces a message on the server, displayed to all players.</summary>
+        /// <param name="client"></param>
+        /// <param name="message">The message to announce</param>
         public static Task Announce(this EvrimaRconClient client, string message)
             => client.SendCommandAsync(EvrimaRconCommand.Announce, message);
 
-        /// <summary>Sends a direct message (announcement) to a specific player.</summary>
+        /// <summary>Sends a direct message to a specific player.</summary>
         /// <param name="client"></param>
-        /// <param name="playerId">The player id (EOS or Steam)</param>
+        /// <param name="player">The player to message (EOS ID, Steam ID, or player name)</param>
         /// <param name="message">The message to send</param>
-        public static Task DirectMessage(this EvrimaRconClient client, string playerId, string message)
-            => client.SendCommandAsync(EvrimaRconCommand.DirectMessage, $"{playerId},{message}");
+        public static Task DirectMessage(this EvrimaRconClient client, string player, string message)
+            => client.SendCommandAsync(EvrimaRconCommand.DirectMessage, $"{player},{message}");
 
         /// <summary>Wipes all corpses on the server.</summary>
         public static Task WipeCorpses(this EvrimaRconClient client)
             => client.SendCommandAsync(EvrimaRconCommand.WipeCorpses);
 
-        /// <summary>Sends the UpdatePlayables command to the server.</summary>
-        public static Task<string> UpdatePlayables(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables);
-
-        /// <summary>Modifies the playable classes on the server.</summary>
+        /// <summary>
+        /// Sets a playable class to enabled or disabled.
+        /// </summary>
         /// <param name="client"></param>
-        /// <param name="playables">Comma-delimited string of playable classes to set</param>
-        public static Task<string> UpdatePlayables(this EvrimaRconClient client, string playables)
-            => client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables, playables);
+        /// <param name="className">The class name</param>
+        /// <param name="enabled"><c>true</c> to enable the class, <c>false</c> to disable it</param>
+        /// <returns>The raw server response</returns>
+        public static Task<string> UpdatePlayables(this EvrimaRconClient client, string className, bool enabled)
+            => client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables,
+                $"{className}:{(enabled ? "enabled" : "disabled")}");
 
-        /// <summary>Bans a player on the server.</summary>
+        /// <summary>
+        /// Sets multiple playable classes at once, each with an enabled or disabled state.
+        /// Builds an argument string in the format <c>class:enabled,class:disabled,...</c>.
+        /// </summary>
         /// <param name="client"></param>
-        /// <param name="playerId">The player id (EOS or Steam)</param>
-        public static Task Ban(this EvrimaRconClient client, string playerId)
-            => client.SendCommandAsync(EvrimaRconCommand.Ban, playerId);
+        /// <param name="playables">
+        /// A dictionary mapping class names to their desired state
+        /// (<c>true</c> = enabled, <c>false</c> = disabled).
+        /// </param>
+        /// <returns>The raw server response</returns>
+        public static Task<string> UpdatePlayables(this EvrimaRconClient client,
+            IDictionary<string, bool> playables)
+        {
+            var argument = string.Join(",",
+                playables.Select(kv => $"{kv.Key}:{(kv.Value ? "enabled" : "disabled")}"));
+            return client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables, argument);
+        }
 
-        /// <summary>Kicks a player on the server.</summary>
+        /// <summary>
+        /// Sets playable classes using a raw argument string in the format <c>class:enabled/disabled</c>.
+        /// Multiple entries can be comma-separated, e.g. <c>"Deinonychus:enabled,Herrerasaurus:disabled"</c>.
+        /// </summary>
         /// <param name="client"></param>
-        /// <param name="playerId">The player id (EOS or Steam)</param>
-        public static Task Kick(this EvrimaRconClient client, string playerId)
-            => client.SendCommandAsync(EvrimaRconCommand.Kick, playerId);
+        /// <param name="argument">Raw argument string</param>
+        /// <returns>The raw server response</returns>
+        public static Task<string> UpdatePlayables(this EvrimaRconClient client, string argument)
+            => client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables, argument);
+
+        /// <summary>Bans a player from the server.</summary>
+        /// <param name="client"></param>
+        /// <param name="player">The player to ban (EOS ID, Steam ID, or player name)</param>
+        /// <param name="reason">The reason for the ban</param>
+        public static Task Ban(this EvrimaRconClient client, string player, string reason)
+            => client.SendCommandAsync(EvrimaRconCommand.Ban, $"{player},{reason}");
+
+        /// <summary>Kicks a player from the server.</summary>
+        /// <param name="client"></param>
+        /// <param name="player">The player to kick (EOS ID, Steam ID, or player name)</param>
+        /// <param name="reason">The reason for the kick</param>
+        public static Task Kick(this EvrimaRconClient client, string player, string reason)
+            => client.SendCommandAsync(EvrimaRconCommand.Kick, $"{player},{reason}");
 
         /// <summary>Saves all game data on the server.</summary>
-        public static Task Save(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.Save);
-
-        /// <summary>Turns the server whitelist on or off.</summary>
-        public static Task ToggleWhitelist(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.ToggleWhitelist);
-
-        /// <summary>Adds player id(s) to the server whitelist.</summary>
         /// <param name="client"></param>
-        /// <param name="playerIds">Comma-delimited string of player ids to add</param>
+        /// <param name="backupName">Optional backup name for the save</param>
+        public static Task Save(this EvrimaRconClient client, string backupName = null)
+            => client.SendCommandAsync(EvrimaRconCommand.Save, backupName ?? string.Empty);
+
+        /// <summary>Enables or disables the server whitelist.</summary>
+        /// <param name="client"></param>
+        /// <param name="enabled"><c>true</c> to enable the whitelist, <c>false</c> to disable it</param>
+        public static Task ToggleWhitelist(this EvrimaRconClient client, bool enabled)
+            => client.SendCommandAsync(EvrimaRconCommand.ToggleWhitelist, enabled ? "1" : "0");
+
+        /// <summary>Adds a player ID to the server whitelist.</summary>
+        /// <param name="client"></param>
+        /// <param name="playerIds">Comma-delimited string of player IDs to add</param>
         public static Task AddWhitelistIds(this EvrimaRconClient client, string playerIds)
             => client.SendCommandAsync(EvrimaRconCommand.AddWhitelistId, playerIds);
 
-        /// <summary>Removes player id(s) from the server whitelist.</summary>
+        /// <summary>Removes a player ID from the server whitelist.</summary>
         /// <param name="client"></param>
-        /// <param name="playerIds">Comma-delimited string of player ids to remove</param>
+        /// <param name="playerIds">Comma-delimited string of player IDs to remove</param>
         public static Task RemoveWhitelistIds(this EvrimaRconClient client, string playerIds)
             => client.SendCommandAsync(EvrimaRconCommand.RemoveWhitelistId, playerIds);
 
-        /// <summary>Turns global chat on or off.</summary>
-        public static Task ToggleGlobalChat(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.ToggleGlobalChat);
-
-        /// <summary>Turns humans on or off.</summary>
-        public static Task ToggleHumans(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.ToggleHumans);
-
-        /// <summary>Turns AI spawns on or off.</summary>
-        public static Task ToggleAI(this EvrimaRconClient client)
-            => client.SendCommandAsync(EvrimaRconCommand.ToggleAI);
-
-        /// <summary>Updates the allowable AI spawn list (disables specified classes).</summary>
+        /// <summary>Enables or disables global chat.</summary>
         /// <param name="client"></param>
-        /// <param name="aiClasses">Comma-delimited string of AI classes to disable</param>
+        /// <param name="enabled"><c>true</c> to enable global chat, <c>false</c> to disable it</param>
+        public static Task ToggleGlobalChat(this EvrimaRconClient client, bool enabled)
+            => client.SendCommandAsync(EvrimaRconCommand.ToggleGlobalChat, enabled ? "1" : "0");
+
+        /// <summary>Enables or disables humans on the server.</summary>
+        /// <param name="client"></param>
+        /// <param name="enabled"><c>true</c> to enable humans, <c>false</c> to disable them</param>
+        public static Task ToggleHumans(this EvrimaRconClient client, bool enabled)
+            => client.SendCommandAsync(EvrimaRconCommand.ToggleHumans, enabled ? "1" : "0");
+
+        /// <summary>Enables or disables AI spawns on the server.</summary>
+        /// <param name="client"></param>
+        /// <param name="enabled"><c>true</c> to enable AI, <c>false</c> to disable it</param>
+        public static Task ToggleAI(this EvrimaRconClient client, bool enabled)
+            => client.SendCommandAsync(EvrimaRconCommand.ToggleAI, enabled ? "1" : "0");
+
+        /// <summary>Updates the AI spawn list by specifying classes to disable.</summary>
+        /// <param name="client"></param>
+        /// <param name="aiClasses">Comma-delimited list of AI classes to disable</param>
         public static Task DisableAIClasses(this EvrimaRconClient client, string aiClasses)
             => client.SendCommandAsync(EvrimaRconCommand.DisableAIClasses, aiClasses);
 
-        /// <summary>Adjusts the AI spawn density.</summary>
+        /// <summary>Sets the AI spawn density (0.0 – 1.0).</summary>
         /// <param name="client"></param>
-        /// <param name="density">The AI density value</param>
+        /// <param name="density">Density value between 0.0 and 1.0</param>
+        public static Task SetAIDensity(this EvrimaRconClient client, float density)
+            => client.SendCommandAsync(EvrimaRconCommand.AIDensity,
+                density.ToString("0.0##", CultureInfo.InvariantCulture));
+
+        /// <summary>Sets the AI spawn density (0.0 – 1.0).</summary>
+        /// <param name="client"></param>
+        /// <param name="density">Density value as a string, e.g. <c>"0.5"</c></param>
         public static Task SetAIDensity(this EvrimaRconClient client, string density)
             => client.SendCommandAsync(EvrimaRconCommand.AIDensity, density);
 

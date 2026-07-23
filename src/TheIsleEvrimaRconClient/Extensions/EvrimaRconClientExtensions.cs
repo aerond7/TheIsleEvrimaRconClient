@@ -46,7 +46,7 @@ namespace TheIsleEvrimaRconClient.Extensions
 
         /// <summary>
         /// Sets multiple playable classes at once, each with an enabled or disabled state.
-        /// Builds an argument string in the format <c>class:enabled,class:disabled,...</c>.
+        /// Builds an argument string in the format <c>class1,class2,class3</c>.
         /// </summary>
         /// <param name="client"></param>
         /// <param name="playables">
@@ -58,7 +58,7 @@ namespace TheIsleEvrimaRconClient.Extensions
             IDictionary<string, bool> playables)
         {
             var argument = string.Join(",",
-                playables.Select(kv => $"{kv.Key}:{(kv.Value ? "enabled" : "disabled")}"));
+                playables.Where(kv => kv.Value).Select(kv => kv.Key));
             return client.SendCommandAsync(EvrimaRconCommand.UpdatePlayables, argument);
         }
 
